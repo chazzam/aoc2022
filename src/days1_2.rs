@@ -1,39 +1,65 @@
 pub fn day_one_both_parts(inputs: &str) {
-    let calorie_groups: Vec<&str> = inputs.split("\n\n").collect();
+    let mut sums = inputs
+        .split("\n\n")
+        .map(|group| {
+            group
+                .lines()
+                .map(|s| s.parse::<i32>().expect("This should be an integer value"))
+                .fold(0, |acc, x| acc + x)
+        })
+        .collect::<Vec<_>>();
 
-    let mut sums: Vec<i32> = Vec::new();
-    let mut sum: i32 = 0;
-    for group in calorie_groups.iter() {
-        let cals: Vec<&str> = group.split("\n").collect();
-        for cal in cals.iter() {
-            if cal.trim().len() == 0 {
-                continue;
-            }
-            sum += cal.parse::<i32>().unwrap();
-        }
-        sums.push(sum);
-        sum = 0;
-    }
-    //println!("calories: {:?}", sums);
-    print!("Elf with most calories: {:?}; ", sums.iter().max().unwrap());
-    if sums.len() < 3 {
-        return;
-    }
+    print!(
+        "Elf with most calories: {:?}; ",
+        sums.iter()
+            .max()
+            .expect("Should have a max value of calories")
+    );
+
+    // Part 2 begins
     sums.sort();
-    //println!("{:?}", sums);
-    sums.reverse();
-    for elf in &sums[..3] {
-        sum += elf;
-    }
+    let sum: i32 = sums.iter().rev().take(3).sum();
     println!("Top three elves: {:?}", sum);
 }
 
-pub fn _base_three_inc(input: i32) -> i32 {
-    let mut out = input + 1;
-    if out > 3 {
-        out = 1;
+fn _decode_value(play: &str) -> i32 {
+    match play {
+        "A" | "X" => 1,
+        "B" | "Y" => 2,
+        "C" | "Z" => 3,
+        _ => 0,
     }
-    return out;
+}
+
+fn _get_win_value(play: &str) -> &str {
+    match play {
+        "A" | "Y" => "B",
+        "B" | "Z" => "C",
+        "C" | "X" | _ => "A",
+    }
+}
+
+fn _score_choice(s_opp: &str, s_choice: &str) -> i32 {
+    let win = match _get_win_value(s_opp) == s_choice {
+        true => 6,
+        false => 0,
+    };
+
+    let tied = match s_opp == s_choice {
+        true => 3,
+        false => 0,
+    };
+
+    _decode_value(s_choice) + win + tied
+}
+
+fn _select_choice<'a>(guide: &str, s_opp: &'a str) -> &'a str {
+    // X = lose; Y = tie; Z = win;
+    match guide {
+        "X" => _get_win_value(_get_win_value(s_opp)),
+        "Z" => _get_win_value(s_opp),
+        "Y" | _ => s_opp,
+    }
 }
 
 pub fn day_two_part_one(inputs: &str) {
@@ -41,77 +67,29 @@ pub fn day_two_part_one(inputs: &str) {
     // X = 1; Y = 2; Z = 3
     // A > 3; B > 1; C > 2
     // Lose = 0; Tie = 3; Win = 6
-    let plays: Vec<&str> = inputs.split("\n").collect();
-    let mut score = 0;
-    for play in plays.iter() {
-        if play.trim().len() == 0 {
-            continue;
-        }
-        let choices: Vec<&str> = play.split(" ").collect();
-        let opp: i32 = match choices[0] {
-            "A" => 1,
-            "B" => 2,
-            "C" => 3,
-            _ => 0,
-        };
-        let choice: i32 = match choices[1] {
-            "X" => 1,
-            "Y" => 2,
-            "Z" => 3,
-            _ => 0,
-        };
-        let win = match _base_three_inc(opp) == choice {
-            true => 6,
-            false => 0,
-        };
-        let tied = match opp == choice {
-            true => 3,
-            false => 0,
-        };
-        score += choice + win + tied;
-    }
+    let score: i32 = inputs
+        .lines()
+        .map(|play| {
+            play.split_once(" ")
+                .expect("Should have at least one space")
+        })
+        .map(|(x, you)| _score_choice(x, _get_win_value(you)))
+        .sum();
     println!("Your score for this game is: {:?}", score);
 }
 
 pub fn day_two_part_two(inputs: &str) {
     // A/X = Rock; B/Y = Paper; C/Z = Scissors
-    // X = 1; Y = 2; Z = 3
-    // A > 3; B > 1; C > 2
+    // X = lose; Y = tie; Z = win
     // Lose = 0; Tie = 3; Win = 6
-    let plays: Vec<&str> = inputs.split("\n").collect();
-    let mut score = 0;
-    for play in plays.iter() {
-        if play.trim().len() == 0 {
-            continue;
-        }
-        let choices: Vec<&str> = play.split(" ").collect();
-        let opp: i32 = match choices[0] {
-            "A" => 1,
-            "B" => 2,
-            "C" => 3,
-            _ => 0,
-        };
-        let result: i32 = match choices[1] {
-            "X" => 1,
-            "Y" => 2,
-            "Z" => 3,
-            _ => 0,
-        };
-        let choice: i32 = match result {
-            1 => _base_three_inc(_base_three_inc(opp)),
-            3 => _base_three_inc(opp),
-            2 | _ => opp,
-        };
-        let win = match _base_three_inc(opp) == choice {
-            true => 6,
-            false => 0,
-        };
-        let tied = match opp == choice {
-            true => 3,
-            false => 0,
-        };
-        score += choice + win + tied;
-    }
+    let score: i32 = inputs
+        .lines()
+        .map(|play| {
+            play.split_once(" ")
+                .expect("Should have at least one space")
+        })
+        .map(|(x, you)| _score_choice(x, _select_choice(you, x)))
+        .sum();
     println!("Your score for this game is: {:?}", score);
 }
 

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 pub fn day_three_p1(inputs: &str) {
-    let packs: Vec<&str> = inputs.split("\n").collect();
+    let packs: Vec<&str> = inputs.lines().collect();
     let mut sum: u32 = 0;
     for pack in packs.iter() {
         if pack.trim().len() == 0 {
@@ -32,7 +32,7 @@ pub fn day_three_p1(inputs: &str) {
 }
 
 pub fn day_three_p2(inputs: &str) {
-    let packs: Vec<&str> = inputs.split("\n").collect();
+    let packs: Vec<&str> = inputs.lines().collect();
     let mut sum: u32 = 0;
     let mut index = 0;
     while index < packs.len() {
@@ -64,7 +64,7 @@ pub fn day_three_p2(inputs: &str) {
 }
 
 pub fn day_four_p1(inputs: &str) {
-    let id_pairs: Vec<&str> = inputs.split("\n").collect();
+    let id_pairs: Vec<&str> = inputs.lines().collect();
     let mut wholly_contained = 0;
     let mut any_overlap = 0;
     for id_pair in id_pairs.iter() {
@@ -76,7 +76,7 @@ pub fn day_four_p1(inputs: &str) {
         //let mut s_ids: Vec<RangeInclusive<i32>> = Vec::new();
         let mut s_ids: Vec<i32> = Vec::new();
         for id in sections.iter() {
-            s_ids.push(id.parse::<i32>().unwrap());
+            s_ids.push(id.parse::<i32>().expect("Sections should be integers"));
         }
         let range1 = s_ids[0]..=s_ids[1];
         let range2 = s_ids[2]..=s_ids[3];
@@ -131,7 +131,13 @@ pub fn day_five_p1(inputs: &str) {
                 let end = (c + 1) * 4 - 1;
                 let block = &big_line[start..end];
                 if block.contains("[") {
-                    stacks[c].insert(0, block.chars().nth(1).unwrap());
+                    stacks[c].insert(
+                        0,
+                        block
+                            .chars()
+                            .nth(1)
+                            .expect("Expected at least 2 characters of input in the 'crate'"),
+                    );
                 }
             }
         }
@@ -142,13 +148,23 @@ pub fn day_five_p1(inputs: &str) {
         }
         // move X from M to N
         let instructions: Vec<&str> = line.trim().split_ascii_whitespace().collect();
-        let count = instructions[1].parse::<usize>().unwrap();
-        let source = instructions[3].parse::<usize>().unwrap() - 1;
-        let destination = instructions[5].parse::<usize>().unwrap() - 1;
+        let count = instructions[1]
+            .parse::<usize>()
+            .expect("Count should be numeric");
+        let source = instructions[3]
+            .parse::<usize>()
+            .expect("Source column should be numeric")
+            - 1;
+        let destination = instructions[5]
+            .parse::<usize>()
+            .expect("Destination column should be numeric")
+            - 1;
 
         for _n in 0..count {
             // pop the back of source stack and push to destination stack
-            let block = stacks[source].pop().unwrap();
+            let block = stacks[source]
+                .pop()
+                .expect("There should have been a 'crate' on the stack here");
             stacks[destination].push(block);
         }
         //println!("{:?}", stacks);
@@ -156,7 +172,11 @@ pub fn day_five_p1(inputs: &str) {
     let mut tops: String = String::new();
     for stack in stacks {
         if stack.len() > 0 {
-            tops.push_str(stack.get(stack.len() - 1..).unwrap());
+            tops.push_str(
+                stack
+                    .get(stack.len() - 1..)
+                    .expect("There should have been a 'crate' on the stack here"),
+            );
         }
     }
 
@@ -192,7 +212,13 @@ pub fn day_five_p2(inputs: &str) {
                 let end = (c + 1) * 4 - 1;
                 let block = &big_line[start..end];
                 if block.contains("[") {
-                    stacks[c].insert(0, block.chars().nth(1).unwrap());
+                    stacks[c].insert(
+                        0,
+                        block
+                            .chars()
+                            .nth(1)
+                            .expect("Expected at least 2 characters of input in the 'crate'"),
+                    );
                 }
             }
         }
@@ -203,14 +229,24 @@ pub fn day_five_p2(inputs: &str) {
         }
         // move X from M to N
         let instructions: Vec<&str> = line.trim().split_ascii_whitespace().collect();
-        let count = instructions[1].parse::<usize>().unwrap();
-        let source = instructions[3].parse::<usize>().unwrap() - 1;
-        let destination = instructions[5].parse::<usize>().unwrap() - 1;
+        let count = instructions[1]
+            .parse::<usize>()
+            .expect("Count should be numeric");
+        let source = instructions[3]
+            .parse::<usize>()
+            .expect("Source should be numeric")
+            - 1;
+        let destination = instructions[5]
+            .parse::<usize>()
+            .expect("Destination should be numeric")
+            - 1;
 
         let destination_top = stacks[destination].len();
         for _n in 0..count {
             // pop the back of source stack and insert on destination stack
-            let block = stacks[source].pop().unwrap();
+            let block = stacks[source]
+                .pop()
+                .expect("'crate' stack should not have been empty here");
             stacks[destination].insert(destination_top, block);
         }
         //println!("{:?}", stacks);
@@ -218,7 +254,11 @@ pub fn day_five_p2(inputs: &str) {
     let mut tops: String = String::new();
     for stack in stacks {
         if stack.len() > 0 {
-            tops.push_str(stack.get(stack.len() - 1..).unwrap());
+            tops.push_str(
+                stack
+                    .get(stack.len() - 1..)
+                    .expect("There should have been at least one 'crate' here"),
+            );
         }
     }
 

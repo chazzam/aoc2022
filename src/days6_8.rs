@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+//use log::{info, trace};
 
 pub fn day_six_p1(inputs: &str) {
     let lines: Vec<&str> = inputs.lines().collect();
