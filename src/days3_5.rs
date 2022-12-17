@@ -1,33 +1,25 @@
 use std::collections::HashSet;
 
-pub fn day_three_p1(inputs: &str) {
-    let packs: Vec<&str> = inputs.lines().collect();
-    let mut sum: u32 = 0;
-    for pack in packs.iter() {
-        if pack.trim().len() == 0 {
-            continue;
-        }
-        let v_pack: Vec<char> = pack.chars().collect();
-        if v_pack.len() % 2 != 0 {
-            println!("Pack didn't have an even number of items: {}", pack);
-        }
-        let half = v_pack.len() / 2;
-        let c1: HashSet<&char> = v_pack[..half].iter().collect();
-        let c2: HashSet<&char> = v_pack[half..].iter().collect();
-
-        let intersect: Vec<&&char> = c1.intersection(&c2).collect();
-        let copied_char: char = if intersect.len() > 0 {
-            **intersect[0]
-        } else {
-            '0'
-        };
-        let char_priority: u32 = match copied_char {
-            'a'..='z' => copied_char as u32 - 97 + 1,
-            'A'..='Z' => copied_char as u32 - 65 + 27,
-            _ => 0,
-        };
-        sum += char_priority;
+fn _score_priority(item: &char) -> u32 {
+    match item {
+        'a'..='z' => *item as u32 - 'a' as u32 + 1,
+        'A'..='Z' => *item as u32 - 'A' as u32 + 27,
+        _ => 0,
     }
+}
+
+fn _pack_priority(pack: std::str::Chars, half: usize) -> u32 {
+    let left = pack.clone().take(half).collect::<HashSet<_>>();
+    let right = pack.skip(half).collect::<HashSet<_>>();
+    left.intersection(&right).map(|x| _score_priority(x)).sum()
+}
+
+pub fn day_three_p1(inputs: &str) {
+    let sum: u32 = inputs
+        .lines()
+        .into_iter()
+        .map(|pack| _pack_priority(pack.chars(), pack.len() / 2))
+        .sum();
     println!("Priority sum is {:?}", sum);
 }
 
@@ -36,27 +28,21 @@ pub fn day_three_p2(inputs: &str) {
     let mut sum: u32 = 0;
     let mut index = 0;
     while index < packs.len() {
-        if index + 3 >= packs.len() {
+        if index + 3 > packs.len() {
             break;
         }
         let elf1: HashSet<char> = packs[index + 0].chars().collect();
         let elf2: HashSet<char> = packs[index + 1].chars().collect();
         let elf3: HashSet<char> = packs[index + 2].chars().collect();
 
-        let e1_2: HashSet<&char> = elf1.intersection(&elf2).collect();
-        let e2_3: HashSet<&char> = elf2.intersection(&elf3).collect();
+        let badge_priority: u32 = elf1
+            .intersection(&elf2)
+            .map(|x| *x)
+            .collect::<HashSet<_>>()
+            .intersection(&elf3)
+            .map(|x| _score_priority(x))
+            .sum();
 
-        let badge_set: Vec<&&char> = e1_2.intersection(&e2_3).collect();
-        let badge: char = if badge_set.len() > 0 {
-            **badge_set[0]
-        } else {
-            '0'
-        };
-        let badge_priority: u32 = match badge {
-            'a'..='z' => badge as u32 - 97 + 1,
-            'A'..='Z' => badge as u32 - 65 + 27,
-            _ => 0,
-        };
         sum += badge_priority;
         index += 3;
     }
@@ -64,46 +50,52 @@ pub fn day_three_p2(inputs: &str) {
 }
 
 pub fn day_four_p1(inputs: &str) {
-    let id_pairs: Vec<&str> = inputs.lines().collect();
-    let mut wholly_contained = 0;
-    let mut any_overlap = 0;
-    for id_pair in id_pairs.iter() {
-        if id_pair.trim().len() == 0 {
-            continue;
-        }
-        //let ids: Vec<&str> = id_pair.split(",").collect();
-        let sections: Vec<&str> = id_pair.split(&['-', ','][..]).collect();
-        //let mut s_ids: Vec<RangeInclusive<i32>> = Vec::new();
-        let mut s_ids: Vec<i32> = Vec::new();
-        for id in sections.iter() {
-            s_ids.push(id.parse::<i32>().expect("Sections should be integers"));
-        }
-        let range1 = s_ids[0]..=s_ids[1];
-        let range2 = s_ids[2]..=s_ids[3];
+    let section_ranges: Vec<_> = inputs
+        .lines()
+        .map(|id_pair| {
+            let sections: Vec<_> = id_pair
+                .split(&['-', ','][..])
+                .map(|x| x.parse::<i32>().expect("Sections should be integers"))
+                .collect();
+            (sections[0]..=sections[1], sections[2]..=sections[3])
+        })
+        .collect();
 
-        if (range2.contains(range1.start()) && range2.contains(range1.end()))
-            || (range1.contains(&range2.start()) && range1.contains(range2.end()))
-        {
-            wholly_contained += 1;
-        }
-        if range2.contains(range1.start())
-            || range2.contains(range1.end())
-            || range1.contains(&range2.start())
-            || range1.contains(range2.end())
-        {
-            any_overlap += 1;
-        }
-        //sections.extend_from_slice(ids[1].split("-").collect()[..]);
-    }
+    let wholly_contained: u32 = section_ranges
+        .iter()
+        .map(|(range1, range2)| {
+            if (range2.contains(range1.start()) && range2.contains(range1.end()))
+                || (range1.contains(&range2.start()) && range1.contains(range2.end()))
+            {
+                1
+            } else {
+                0
+            }
+        })
+        .sum();
+
+    let any_overlap: u32 = section_ranges
+        .iter()
+        .map(|(range1, range2)| {
+            if range2.contains(range1.start())
+                || range2.contains(range1.end())
+                || range1.contains(&range2.start())
+                || range1.contains(range2.end())
+            {
+                1
+            } else {
+                0
+            }
+        })
+        .sum();
 
     println!(
         "Sections wholly contained: {:?}; Sections with Overlap: {:?}",
         wholly_contained, any_overlap
     );
 }
-
-pub fn day_five_p1(inputs: &str) {
-    let lines: Vec<&str> = inputs.lines().collect();
+//std::str::Lines
+fn _get_columns(lines: &Vec<&str>) -> usize {
     let mut columns = 0;
     // Get the row with the column numbers
     for line in lines.iter() {
@@ -112,11 +104,17 @@ pub fn day_five_p1(inputs: &str) {
         }
         let cols: Vec<&str> = line.trim().split("   ").collect();
         columns = cols.len();
+        break;
     }
+    columns
+}
+
+pub fn day_five_p1(inputs: &str) {
+    let lines: Vec<&str> = inputs.lines().collect();
+    let columns = _get_columns(&lines);
     let mut stacks: Vec<String> = Vec::new();
-    for _c in 0..columns {
-        stacks.push(String::from(""));
-    }
+    stacks.resize(columns, String::from(""));
+
     for &line in lines.iter() {
         if line.trim().len() == 0 {
             continue;
@@ -185,19 +183,10 @@ pub fn day_five_p1(inputs: &str) {
 
 pub fn day_five_p2(inputs: &str) {
     let lines: Vec<&str> = inputs.lines().collect();
-    let mut columns = 0;
-    // Get the row with the column numbers
-    for line in lines.iter() {
-        if !line.trim().starts_with("1") {
-            continue;
-        }
-        let cols: Vec<&str> = line.trim().split("   ").collect();
-        columns = cols.len();
-    }
+    let columns = _get_columns(&lines);
     let mut stacks: Vec<String> = Vec::new();
-    for _c in 0..columns {
-        stacks.push(String::from(""));
-    }
+    stacks.resize(columns, String::from(""));
+
     for &line in lines.iter() {
         if line.trim().len() == 0 {
             continue;
