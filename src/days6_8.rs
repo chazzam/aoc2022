@@ -259,14 +259,13 @@ fn day_seven_p1(inputs: &str) {
     let mut size_tree: HashMap<String, u64> = HashMap::new();
     let mut sum: u64 = 0;
     for (root, root_size) in tree.iter() {
-        let size: u64 = *root_size
-            + tree.iter().fold(0, |acc, (name, size)| {
-                if name.contains(root) && name != root {
-                    acc + size
-                } else {
-                    acc
-                }
-            });
+        let size: u64 = tree.iter().fold(*root_size, |acc, (name, size)| {
+            if name.contains(root) && name != root {
+                acc + size
+            } else {
+                acc
+            }
+        });
         size_tree.insert(root.clone(), size);
         if size <= 100000 {
             sum += size;
@@ -299,6 +298,8 @@ fn day_seven_p1(inputs: &str) {
     //dbg!(tree, size_tree);
 }
 
+fn day_eight_p1(_inputs: &str) {}
+
 pub fn run_days() {
     let samples = include_str!("../inputs/06_sample.txt");
     let _inputs = include_str!("../inputs/06_input.txt");
@@ -321,17 +322,17 @@ pub fn run_days() {
     print!("Running Day Seven Inputs: ");
     day_seven_p1(_inputs);
 
-    /*
-    let samples = include_str!("../inputs/05_sample.txt");
-    let _inputs = include_str!("../inputs/05_input.txt");
+    let samples = include_str!("../inputs/08_sample.txt");
+    let _inputs = include_str!("../inputs/08_input.txt");
 
-    print!("\nRunning Day Five, part one sample: ");
-    day_five_p1(samples);
-    print!("Running Day Five, part one Inputs: ");
-    day_five_p1(_inputs);
-    print!("Running Day Five, part two sample: ");
-    day_five_p2(samples);
-    print!("Running Day Five, part two Inputs: ");
-    day_five_p2(_inputs);
+    print!("\nRunning Day Eight, part one sample: ");
+    day_eight_p1(samples);
+    /*
+    print!("Running Day Eight, part one Inputs: ");
+    day_eight_p1(_inputs);
+    print!("Running Day Eight, part two sample: ");
+    day_eight_p2(samples);
+    print!("Running Day Eight, part two Inputs: ");
+    day_eight_p2(_inputs);
     */
 }
