@@ -3,3 +3,6 @@ name = "aoc2022"
 version = "0.1.0"
 authors = ["chazzam"]
 edition = "2021"
+
+[dependencies]
+transpose = "0.2.2"

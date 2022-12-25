@@ -178,7 +178,7 @@ pub fn run_days() {
     print!("Running Day Eleven, Part one Inputs: ");
     day_eleven_p1(_inputs, false);
 
-    print!("\nRunning Day Eleven, Part two sample: ");
+    print!("Running Day Eleven, Part two sample: ");
     day_eleven_p1(samples, true);
     print!("Running Day Eleven, Part two Inputs: ");
     day_eleven_p1(_inputs, true);

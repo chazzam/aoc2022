@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+//use transpose::transpose;
+extern crate transpose;
 
 pub fn day_six_p1(inputs: &str) {
     let lines: Vec<&str> = inputs.lines().collect();
@@ -298,7 +300,75 @@ fn day_seven_p1(inputs: &str) {
     //dbg!(tree, size_tree);
 }
 
-fn day_eight_p1(_inputs: &str) {}
+fn trees_count_row(row: &[u8], cols: usize) -> usize {
+    row.windows(2)
+        .enumerate()
+        .inspect(|x| print!("{:?}:", x))
+        .map_while(|(_i, x)| {
+            if _i == cols - 2 {
+                // Explicitly disallow comparing from the inside to the outside edge
+                // As the outside is already counted regardless
+                None
+            } else if x[0] == x[1] {
+                Some(0)
+            } else if x[0] < x[1] {
+                Some(1)
+            } else {
+                None
+            }
+        })
+        .inspect(|x| print!("{:?}\n", x))
+        .sum::<usize>()
+        + 1
+}
+
+fn trees_count_rows(trees: Vec<u8>, rows: usize, cols: usize) -> usize {
+    trees
+        .chunks(cols)
+        .enumerate()
+        .map(|(i, x)| {
+            if i == 0 || i == rows - 1 {
+                2
+            } else {
+                let forward = trees_count_row(x, cols);
+                forward
+                    + trees_count_row(
+                        (x.iter().rev().map(|x| *x).collect::<Vec<u8>>()).as_slice(),
+                        cols,
+                    )
+            }
+        })
+        .sum()
+}
+
+fn day_eight_p1(_inputs: &str) {
+    // Get the height list, and the dimensions of the grid
+    let trees: Vec<_> = _inputs
+        .lines()
+        .map(|x| {
+            dbg!(&x);
+            x.split("").filter_map(|x| x.parse::<u8>().ok())
+        })
+        .flatten()
+        .collect();
+    let rows = _inputs.trim().lines().count();
+    let cols = _inputs.lines().next().unwrap().trim().len();
+    let mut trees_transposed = trees.clone();
+    transpose::transpose(&trees, &mut trees_transposed, rows, cols);
+
+    // process all rows
+    // chunks each row,
+    // then windows in pairs until trees are too tall to be seen
+    let rows_parsed: usize = trees_count_rows(trees, rows, cols);
+    dbg!(rows_parsed);
+    println!("\nSwapping to transpose\n");
+    // need to build a transpose view of the grid
+    let cols_parsed: usize = trees_count_rows(trees_transposed, cols, rows);
+
+    // this returns a number far too large because it counts some trees more than once.
+    // need to go back to the drawing board on this one...
+    println!("Trees Visible: {:?}", cols_parsed + rows_parsed);
+}
 
 pub fn run_days() {
     let samples = include_str!("../inputs/06_sample.txt");
