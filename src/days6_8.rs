@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
-//use transpose::transpose;
-extern crate transpose;
 
 pub fn day_six_p1(inputs: &str) {
     let lines: Vec<&str> = inputs.lines().collect();
@@ -51,139 +49,6 @@ pub fn day_six_p2(inputs: &str) {
         println!("Found start-of-message ending at position {:?}", message);
     }
 }
-
-/*
-#[derive(Debug)]
-struct Dir<'a> {
-    name: &'a str,
-    //files: HashMap<&'a str, usize>,
-    files_size: usize,
-    dirs: HashMap<&'a str, Dir<'a>>,
-}
-
-impl<'a> Dir<'a> {
-    pub fn new() -> Dir<'a> {
-        Dir {
-            name: "",
-            //files: HashMap::new(),
-            files_size: 0,
-            dirs: HashMap::new(),
-        }
-    }
-
-    fn add_file(&mut self, size: usize) {
-        //self.files.insert(_name, size);
-        self.files_size += size;
-    }
-
-    fn _add_dir(&mut self, _name: &'a str) {
-        let mut new_dir = Dir::new();
-        new_dir.name = _name;
-        self.dirs.insert(_name, new_dir);
-    }
-
-    fn _size(&self) -> usize {
-        //self.dirs.iter().map(|dir| dir.1.size()).sum::<usize>()
-        //+ self.files.iter().map(|file| file.1).sum::<usize>()
-        self.dirs.iter().map(|dir| dir.1._size()).sum::<usize>() + self.files_size
-    }
-
-    fn _update(&mut self, new_dir: Dir<'a>) -> bool {
-        // Find a directory under this,
-        // that matches new_dir.name, and replace old_dir with new_dir
-        let name = new_dir.name;
-        if self.dirs.contains_key(name) {
-            self.dirs.insert(name, new_dir);
-            true
-        } else {
-            false
-        }
-    }
-}
-
-fn _day_seven_p1_take2(inputs: &str) {
-    let mut commands = inputs.split("$ ").map(|x| String::from(x));
-    let mut tree: HashMap<String, usize> = HashMap::new();
-    let mut pwd = String::from("");
-    let mut root = Dir::new();
-    root.name = "/";
-    let mut dir = Dir { ..root };
-
-    // Skip the initial empty split result
-    commands.next();
-    let mut command = commands.next();
-    //let mut my_command: String;
-    while !&command.is_none() {
-        dbg!(&command);
-        let my_command = command.expect("There should be a command here");
-        if my_command.trim().len() == 0 {
-            command = commands.next();
-            continue;
-        }
-        dbg!(&my_command);
-        match &my_command[..2] {
-            "cd" => {
-                // overwrite the existing dir in the list with the current root
-                let dir_path = my_command.split_once(" ").unwrap();
-                if dir_path.1.trim() == ".." {
-                    // Need to go up a directory
-                    if pwd.as_str() != "/" {
-                        pwd.pop();
-                        while pwd.pop() != Some('/') {}
-                    }
-                    //pwd = pwd.rsplit_once("/").unwrap().0.to_string();
-                } else {
-                    pwd.push_str(dir_path.1.trim());
-                    if pwd.as_str() != "/" {
-                        pwd.push_str("/");
-                    }
-                }
-                if pwd.trim().len() == 0 {
-                    pwd.push_str("/");
-                }
-                // add a dir, and get a copy mutable
-                dbg!(&pwd);
-            }
-            "ls" => {
-                // listing files; call .lines()
-                // save size of current path in tree
-                let mut dirsize: usize = 0;
-                for line in my_command.lines() {
-                    if line == "ls" {
-                        continue;
-                    }
-                    dbg!(&line);
-                    let parts = line
-                        .split_once(" ")
-                        .expect("There should be a file/dir entry");
-                    match parts.0 {
-                        "dir" | "ls" => {
-                            continue;
-                        }
-                        _ => {
-                            let size = parts
-                                .0
-                                .parse::<usize>()
-                                .expect("Sections should be integers");
-                            //dir.add_file(parts.1.clone(), size);
-                            dir.add_file(size);
-                            dirsize += size;
-                        }
-                    };
-                }
-                dbg!(&pwd, dirsize);
-                tree.insert(String::from(&pwd), dirsize);
-            }
-            _ => {
-                // add a file to this path?
-                // continue? break?
-            }
-        }
-        command = commands.next();
-    }
-    dbg!(tree);
-}
-*/
 
 fn day_seven_p1(inputs: &str) {
     let mut commands = inputs.split("$ ").map(|x| String::from(x));
@@ -300,74 +165,181 @@ fn day_seven_p1(inputs: &str) {
     //dbg!(tree, size_tree);
 }
 
-fn trees_count_row(row: &[u8], cols: usize) -> usize {
-    row.windows(2)
-        .enumerate()
-        .inspect(|x| print!("{:?}:", x))
-        .map_while(|(_i, x)| {
-            if _i == cols - 2 {
-                // Explicitly disallow comparing from the inside to the outside edge
-                // As the outside is already counted regardless
-                None
-            } else if x[0] == x[1] {
-                Some(0)
-            } else if x[0] < x[1] {
-                Some(1)
-            } else {
-                None
-            }
-        })
-        .inspect(|x| print!("{:?}\n", x))
-        .sum::<usize>()
-        + 1
-}
+fn check_visibility(trees: &Vec<Vec<u8>>, row: usize, col: usize) -> usize {
+    let tree = trees[row][col];
+    let cols = trees[0].len();
 
-fn trees_count_rows(trees: Vec<u8>, rows: usize, cols: usize) -> usize {
-    trees
-        .chunks(cols)
-        .enumerate()
-        .map(|(i, x)| {
-            if i == 0 || i == rows - 1 {
-                2
-            } else {
-                let forward = trees_count_row(x, cols);
-                forward
-                    + trees_count_row(
-                        (x.iter().rev().map(|x| *x).collect::<Vec<u8>>()).as_slice(),
-                        cols,
-                    )
-            }
-        })
-        .sum()
+    // check from up
+    let mut vis_up = false;
+    for r in 0..row {
+        if trees[r][col] >= tree {
+            // if any tree in the path is larger, try another direction
+            break;
+        } else if r + 1 == row {
+            vis_up = true;
+        }
+    }
+
+    // check from down
+    let mut vis_down = false;
+    for r in row + 1..trees.len() {
+        if trees[r][col] >= tree {
+            // if any tree in the path is larger, try another direction
+            break;
+        } else if r == trees.len() - 1 {
+            vis_down = true;
+        }
+    }
+
+    // check from left
+    // can just compare the slice from start to here in this vec
+    let mut vis_left = false;
+    if trees[row][0..col].iter().max().unwrap() < &tree {
+        vis_left = true;
+    }
+
+    // check from right
+    // just compare the slice from the position to the right to the end
+    let mut vis_right = false;
+    if trees[row][col + 1..cols].iter().max().unwrap() < &tree {
+        vis_right = true;
+    }
+    let visible = vis_right || vis_left || vis_up || vis_down;
+    /*print!(
+        "\n({:?},{:?}) = {:?}, left: ({:?})={:?}, right: ({:?})={:?}, vis: {:?},{:?},{:?},{:?}->{:?}",
+        row,
+        col,
+        tree,
+        trees[row][0..col].len(),
+        trees[row][0..col].iter().max().unwrap(),
+        trees[row][col + 1..cols].len(),
+        trees[row][col + 1..cols].iter().max().unwrap(),
+        vis_up,
+        vis_down,
+        vis_left,
+        vis_right,
+        visible
+    );*/
+    match visible {
+        true => 1,
+        false => 0,
+    }
 }
 
 fn day_eight_p1(_inputs: &str) {
     // Get the height list, and the dimensions of the grid
-    let trees: Vec<_> = _inputs
+    let trees: Vec<Vec<_>> = _inputs
         .lines()
         .map(|x| {
-            dbg!(&x);
-            x.split("").filter_map(|x| x.parse::<u8>().ok())
+            //dbg!(&x);
+            x.split("").filter_map(|x| x.parse::<u8>().ok()).collect()
         })
-        .flatten()
         .collect();
-    let rows = _inputs.trim().lines().count();
-    let cols = _inputs.lines().next().unwrap().trim().len();
-    let mut trees_transposed = trees.clone();
-    transpose::transpose(&trees, &mut trees_transposed, rows, cols);
+    let rows = trees.len();
+    let cols = trees[0].len();
+    let mut visible: usize = 0;
 
-    // process all rows
-    // chunks each row,
-    // then windows in pairs until trees are too tall to be seen
-    let rows_parsed: usize = trees_count_rows(trees, rows, cols);
-    dbg!(rows_parsed);
-    println!("\nSwapping to transpose\n");
-    // need to build a transpose view of the grid
-    let cols_parsed: usize = trees_count_rows(trees_transposed, cols, rows);
+    for row in 1..rows - 1 {
+        for col in 1..cols - 1 {
+            let is_visible = check_visibility(&trees, row, col);
+            //println!(" ({:?},{:?})={:?}", row, col, is_visible);
+            visible += is_visible;
+        }
+    }
+    //dbg!(visible);
 
-    // this returns a number far too large because it counts some trees more than once.
-    // need to go back to the drawing board on this one...
-    println!("Trees Visible: {:?}", cols_parsed + rows_parsed);
+    // Count the outside trees, and subtract off the corners
+    // so we don't count them twice
+    println!("Trees Visible: {:?}", cols * 2 + rows * 2 - 4 + visible);
+}
+
+fn count_visibility(trees: &Vec<Vec<u8>>, row: usize, col: usize) -> usize {
+    let tree = trees[row][col];
+    let cols = trees[0].len();
+
+    // check from up
+    let mut vis_up = 0;
+    for r in (0..row).rev() {
+        vis_up += 1;
+        if trees[r][col] >= tree {
+            // if any tree in the path is larger, try another direction
+            break;
+        }
+    }
+
+    // check from down
+    let mut vis_down = 0;
+    for r in row + 1..trees.len() {
+        vis_down += 1;
+        if trees[r][col] >= tree {
+            // if any tree in the path is larger, try another direction
+            break;
+        }
+    }
+
+    // check from left
+    // can just compare the slice from start to here in this vec
+    let mut vis_left = 0;
+    for view in trees[row][0..col].iter().rev() {
+        vis_left += 1;
+        if view >= &tree {
+            break;
+        }
+    }
+
+    // check from right
+    // just compare the slice from the position to the right to the end
+    let mut vis_right = 0;
+    for view in trees[row][col + 1..cols].iter() {
+        vis_right += 1;
+        if view >= &tree {
+            break;
+        }
+    }
+    let visible = vis_right * vis_left * vis_up * vis_down;
+    /*print!(
+        "\n({:?},{:?}) = {:?}, left: ({:?})={:?}, right: ({:?})={:?}, vis: {:?},{:?},{:?},{:?}->{:?}",
+        row,
+        col,
+        tree,
+        trees[row][0..col].len(),
+        trees[row][0..col].iter().max().unwrap(),
+        trees[row][col + 1..cols].len(),
+        trees[row][col + 1..cols].iter().max().unwrap(),
+        vis_up,
+        vis_down,
+        vis_left,
+        vis_right,
+        visible
+    );*/
+    visible
+}
+
+fn day_eight_p2(_inputs: &str) {
+    // Get the height list, and the dimensions of the grid
+    let trees: Vec<Vec<_>> = _inputs
+        .lines()
+        .map(|x| {
+            //dbg!(&x);
+            x.split("").filter_map(|x| x.parse::<u8>().ok()).collect()
+        })
+        .collect();
+    let rows = trees.len();
+    let cols = trees[0].len();
+
+    let mut visibility_scores: Vec<usize> = Vec::new();
+    for row in 1..rows - 1 {
+        for col in 1..cols - 1 {
+            let visible = count_visibility(&trees, row, col);
+            //println!(" ({:?},{:?})={:?}", row, col, visible);
+            visibility_scores.push(visible);
+        }
+    }
+
+    println!(
+        "Highest Tree Visiblility Score: {:?}",
+        visibility_scores.iter().max().unwrap()
+    );
 }
 
 pub fn run_days() {
@@ -388,7 +360,6 @@ pub fn run_days() {
 
     print!("\nRunning Day Seven sample: ");
     day_seven_p1(samples);
-    //day_seven_p1_take2(samples);
     print!("Running Day Seven Inputs: ");
     day_seven_p1(_inputs);
 
@@ -397,12 +368,10 @@ pub fn run_days() {
 
     print!("\nRunning Day Eight, part one sample: ");
     day_eight_p1(samples);
-    /*
     print!("Running Day Eight, part one Inputs: ");
     day_eight_p1(_inputs);
     print!("Running Day Eight, part two sample: ");
     day_eight_p2(samples);
     print!("Running Day Eight, part two Inputs: ");
     day_eight_p2(_inputs);
-    */
 }
