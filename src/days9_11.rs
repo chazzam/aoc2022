@@ -1,5 +1,6 @@
+use std::collections::HashMap;
+
 #[derive(Debug)]
-//struct Monkey<'a> {
 struct Monkey {
     inspections: usize,
     items: Vec<u128>,
@@ -7,14 +8,11 @@ struct Monkey {
     operation2: fn(u128, u128) -> u128,
     operation_arg: usize,
     use_old: bool,
-    //test: &'a dyn Fn(usize) -> (usize, usize),
-    //test: fn(usize) -> (usize, usize),
     test: usize,
     res_true: usize,
     res_false: usize,
 }
 
-//impl<'a> Monkey<'a> {
 impl Monkey {
     fn evaluate_item(&self, item: u128, use2: bool, factor: u128) -> (usize, u128) {
         let arg = match self.use_old {
@@ -170,7 +168,395 @@ pub fn day_eleven_p1(inputs: &str, use2: bool) {
     );
 }
 
+#[derive(Debug)]
+struct Cell {
+    head: bool,
+    tail: bool,
+    head_visited: bool,
+    tail_visited: bool,
+}
+
+#[derive(Debug)]
+struct MultiCell {
+    head: bool,
+    tails: Vec<bool>,
+    head_visited: bool,
+    tails_visited: Vec<bool>,
+}
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+fn get_updated_tail_coordinates(
+    head_row: i16,
+    head_col: i16,
+    current_tail_row: i16,
+    current_tail_col: i16,
+) -> (i16, i16) {
+    let mut tail_row = current_tail_row;
+    let mut tail_col = current_tail_col;
+
+    // Update the tail
+    if head_col == tail_col {
+        if head_row > tail_row + 1 {
+            tail_row += 1;
+        } else if head_row + 1 < tail_row {
+            tail_row -= 1;
+        }
+    } else if head_row == tail_row {
+        if head_col > tail_col + 1 {
+            tail_col += 1;
+        } else if head_col + 1 < tail_col {
+            tail_col -= 1;
+        }
+    } else if head_row > tail_row + 1 {
+        if head_col > tail_col {
+            tail_row += 1;
+            tail_col += 1;
+        } else if head_col < tail_col {
+            tail_row += 1;
+            tail_col -= 1;
+        }
+    } else if head_row + 1 < tail_row {
+        if head_col > tail_col {
+            tail_row -= 1;
+            tail_col += 1;
+        } else if head_col < tail_col {
+            tail_row -= 1;
+            tail_col -= 1;
+        }
+    } else if head_col > tail_col + 1 {
+        if head_row > tail_row {
+            tail_row += 1;
+            tail_col += 1;
+        } else if head_row < tail_row {
+            tail_row -= 1;
+            tail_col += 1;
+        }
+    } else if head_col + 1 < tail_col {
+        if head_row > tail_row {
+            tail_row += 1;
+            tail_col -= 1;
+        } else if head_row < tail_row {
+            tail_row -= 1;
+            tail_col -= 1;
+        }
+    }
+
+    (tail_row, tail_col)
+}
+
+fn move_head(
+    mut grid: HashMap<(i16, i16), Cell>,
+    mut current_row: i16,
+    mut current_col: i16,
+    dir: Direction,
+    repeat: usize,
+) -> (i16, i16, HashMap<(i16, i16), Cell>) {
+    let mut row = current_row;
+    let mut col = current_col;
+
+    // find tail
+    let mut current_tail_row: i16;
+    let mut current_tail_col: i16;
+    (current_tail_row, current_tail_col) = grid
+        .iter()
+        .find_map(
+            |((row, col), cell)| {
+                if cell.tail {
+                    Some((*row, *col))
+                } else {
+                    None
+                }
+            },
+        )
+        .expect("Should be a tail");
+
+    for _r in 0..repeat {
+        match dir {
+            Direction::Up => row += 1,
+            Direction::Down => row -= 1,
+            Direction::Left => col -= 1,
+            Direction::Right => col += 1,
+        }
+
+        // Update the head
+        grid.entry((current_row, current_col))
+            .and_modify(|cell| cell.head = false);
+
+        grid.entry((row, col))
+            .and_modify(|cell| {
+                cell.head = true;
+                cell.head_visited = true;
+            })
+            .or_insert(Cell {
+                head: true,
+                tail: false,
+                head_visited: true,
+                tail_visited: false,
+            });
+
+        // Update the tail
+        let (tail_row, tail_col) =
+            get_updated_tail_coordinates(row, col, current_tail_row, current_tail_col);
+
+        grid.entry((current_tail_row, current_tail_col))
+            .and_modify(|cell| cell.tail = false);
+
+        grid.entry((tail_row, tail_col))
+            .and_modify(|cell| {
+                cell.tail = true;
+                cell.tail_visited = true;
+            })
+            .or_insert(Cell {
+                head: false,
+                tail: true,
+                head_visited: false,
+                tail_visited: true,
+            });
+
+        // Update the current row and column
+        current_row = row;
+        current_col = col;
+        current_tail_row = tail_row;
+        current_tail_col = tail_col;
+    }
+    (row, col, grid)
+}
+
+fn debug_display(grid: &HashMap<(i16, i16), Cell>) -> Vec<String> {
+    let rows: i16 = grid
+        .keys()
+        .max_by_key(|(row, _col)| row)
+        .map(|(row, _col)| *row)
+        .unwrap();
+    let cols: i16 = grid
+        .keys()
+        .max_by_key(|(_row, col)| col)
+        .map(|(_row, col)| *col)
+        .unwrap();
+    let min_row: i16 = grid
+        .keys()
+        .min_by_key(|(row, _col)| row)
+        .map(|(row, _col)| *row)
+        .unwrap();
+    let min_col: i16 = grid
+        .keys()
+        .min_by_key(|(_row, col)| col)
+        .map(|(_row, col)| *col)
+        .unwrap();
+    let total_rows: i16 = (rows - min_row) + 1;
+    let mut _display: Vec<_> = vec![String::from(""); total_rows as usize];
+    //let mut display_row = total_rows - 1;
+    let mut display_row: usize = 0;
+    for r in (min_row..=rows as i16).rev() {
+        for c in min_col..=cols as i16 {
+            let cell = grid.get(&(r, c)).unwrap_or(&Cell {
+                head: false,
+                tail: false,
+                head_visited: false,
+                tail_visited: false,
+            });
+            let mut field = ".";
+            if r == 1 && c == 1 {
+                field = "$";
+            } else if cell.tail_visited {
+                field = "#";
+            } else if cell.head_visited {
+                field = "x";
+            }
+            _display[display_row].push_str(field);
+        }
+        display_row += 1;
+    }
+    _display
+}
+
+pub fn day_nine_p1(inputs: &str) {
+    let mut grid: HashMap<(i16, i16), Cell> = HashMap::new();
+    let mut row = 1;
+    let mut col = 1;
+    grid.insert(
+        (row, col),
+        Cell {
+            head: true,
+            tail: true,
+            head_visited: true,
+            tail_visited: true,
+        },
+    );
+
+    for line in inputs.lines() {
+        let fields: Vec<_> = line.split_whitespace().collect();
+        let dir: Direction = match fields[0] {
+            "U" => Direction::Up,
+            "D" => Direction::Down,
+            "L" => Direction::Left,
+            "R" | _ => Direction::Right,
+        };
+        let repeat: usize = fields[1]
+            .parse::<usize>()
+            .expect("Repeat should be an integer");
+        (row, col, grid) = move_head(grid, row, col, dir, repeat);
+    }
+
+    let head_visited: usize = grid.values().filter(|x| x.head_visited).count();
+    let visited: usize = grid.values().filter(|x| x.tail_visited).count();
+
+    // display for debugging
+    let _display = debug_display(&grid);
+    //dbg!(&_display);
+
+    println!("Tail Visited: {:?} ({:?})", visited, head_visited);
+    //dbg!(grid);
+}
+
+fn update_rope(
+    //mut moves: impl Iterator<Item = Option<(i16, i16)>>,
+    mut moves: impl Iterator<Item = (i16, i16)>,
+    tails: usize,
+) -> HashMap<(i16, i16), Cell> {
+    let mut grid: HashMap<(i16, i16), Cell> = HashMap::new();
+    //let (row, col) = moves.next().unwrap().unwrap();
+    let (mut last_row, mut last_col) = moves.next().unwrap();
+    grid.insert(
+        (last_row, last_col),
+        Cell {
+            head: true,
+            tail: true,
+            head_visited: true,
+            tail_visited: true,
+        },
+    );
+    //moves.scan((last_row, last_col), |(last_row, last_col), (row,col)|)
+    let mut pos_tails: Vec<(i16, i16)> = vec![(last_row, last_col); tails];
+    for (head_row, head_col) in moves {
+        // Update the head
+        grid.entry((last_row, last_col))
+            .and_modify(|cell| cell.head = false);
+        last_row = head_row;
+        last_col = head_col;
+
+        grid.entry((head_row, head_col))
+            .and_modify(|cell| {
+                cell.head = true;
+                cell.head_visited = true;
+            })
+            .or_insert(Cell {
+                head: true,
+                tail: false,
+                head_visited: true,
+                tail_visited: false,
+            });
+
+        let (current_tail_row, current_tail_col) = pos_tails[pos_tails.len() - 1];
+        //let new_pos_tails: Vec<(i16, i16)> = pos_tails
+        pos_tails = pos_tails
+            .iter()
+            .scan((head_row, head_col), |(head_row, head_col), (row, col)| {
+                let (tail_row, tail_col) =
+                    get_updated_tail_coordinates(*head_row, *head_col, *row, *col);
+                /*println!(
+                    "({:?},{:?}) & ({:?},{:?}) -> ({:?},{:?})",
+                    head_row, head_col, row, col, tail_row, tail_col
+                );*/
+                *head_row = tail_row.clone();
+                *head_col = tail_col.clone();
+                Some((tail_row, tail_col))
+            })
+            // .inspect(|(r, c)| print!("{:?},{:?}; ", r, c))
+            .collect();
+        //pos_tails = new_pos_tails;
+        //print!("\n");
+
+        grid.entry((current_tail_row, current_tail_col))
+            .and_modify(|cell| cell.tail = false);
+
+        let (tail_row, tail_col) = pos_tails.last().unwrap();
+        grid.entry((*tail_row, *tail_col))
+            .and_modify(|cell| {
+                cell.tail = true;
+                cell.tail_visited = true;
+            })
+            .or_insert(Cell {
+                head: false,
+                tail: true,
+                head_visited: false,
+                tail_visited: true,
+            });
+    }
+    grid
+}
+
+pub fn day_nine_p2(inputs: &str) {
+    // Build an iterator over all the Head moves
+    let moves = inputs
+        .lines()
+        .scan((1, 1, false), |(row, col, init), line| {
+            let mut fields = line.split_whitespace().rev();
+            let repeat: usize = fields
+                .next()
+                .unwrap()
+                .parse::<usize>()
+                .expect("Repeat should be an integer");
+            let dir = match fields.next().unwrap() {
+                "U" => Direction::Up,
+                "D" => Direction::Down,
+                "L" => Direction::Left,
+                "R" | _ => Direction::Right,
+            };
+            let mut dirs: Vec<_> = Vec::new();
+            if !*init {
+                //dirs.push(Some((row.clone(), col.clone())));
+                dirs.push((row.clone(), col.clone()));
+                *init = true;
+            }
+
+            for _r in 0..repeat {
+                match &dir {
+                    Direction::Up => *row += 1,
+                    Direction::Down => *row -= 1,
+                    Direction::Left => *col -= 1,
+                    Direction::Right => *col += 1,
+                };
+                //dirs.push(Some((row.clone(), col.clone())));
+                dirs.push((row.clone(), col.clone()));
+            }
+            Some(dirs)
+        })
+        .flatten();
+    //dbg!(&moves.collect::<Vec<_>>());
+    let grid = update_rope(moves, 9);
+    let head_visited: usize = grid.values().filter(|x| x.head_visited).count();
+    let visited: usize = grid.values().filter(|x| x.tail_visited).count();
+
+    // display for debugging
+    let _display = debug_display(&grid);
+    //dbg!(&_display);
+
+    println!("Tail Visited: {:?} ({:?})", visited, head_visited);
+    //dbg!(grid);
+}
+
 pub fn run_days() {
+    let samples = include_str!("../inputs/09_sample.txt");
+    let _inputs = include_str!("../inputs/09_input.txt");
+    print!("\nRunning Day Nine, Part one sample: ");
+    day_nine_p1(samples);
+    print!("Running Day Nine, Part one Inputs: ");
+    day_nine_p1(_inputs);
+
+    let _samples2 = include_str!("../inputs/09_sample2.txt");
+    print!("Running Day Nine, Part two sample: ");
+    day_nine_p2(samples);
+    day_nine_p2(_samples2);
+    print!("Running Day Nine, Part two Inputs: ");
+    day_nine_p2(_inputs);
+
     let samples = include_str!("../inputs/11_sample.txt");
     let _inputs = include_str!("../inputs/11_input.txt");
     print!("\nRunning Day Eleven, Part one sample: ");
@@ -182,32 +568,4 @@ pub fn run_days() {
     day_eleven_p1(samples, true);
     print!("Running Day Eleven, Part two Inputs: ");
     day_eleven_p1(_inputs, true);
-
-    /*
-    print!("Running Day Six, Part two sample:\n");
-    day_six_p2(samples);
-    print!("Running Day Six, Part two Inputs: ");
-    day_six_p2(_inputs);
-
-    let samples = include_str!("../inputs/07_sample.txt");
-    let _inputs = include_str!("../inputs/07_input.txt");
-
-    print!("\nRunning Day Seven sample: ");
-    day_seven_p1(samples);
-    //day_seven_p1_take2(samples);
-    print!("Running Day Seven Inputs: ");
-    day_seven_p1(_inputs);
-
-    let samples = include_str!("../inputs/08_sample.txt");
-    let _inputs = include_str!("../inputs/08_input.txt");
-
-    print!("\nRunning Day Eight, part one sample: ");
-    day_eight_p1(samples);
-    print!("Running Day Eight, part one Inputs: ");
-    day_eight_p1(_inputs);
-    print!("Running Day Eight, part two sample: ");
-    day_eight_p2(samples);
-    print!("Running Day Eight, part two Inputs: ");
-    day_eight_p2(_inputs);
-    */
 }
