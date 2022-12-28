@@ -176,14 +176,6 @@ struct Cell {
     tail_visited: bool,
 }
 
-#[derive(Debug)]
-struct MultiCell {
-    head: bool,
-    tails: Vec<bool>,
-    head_visited: bool,
-    tails_visited: Vec<bool>,
-}
-
 enum Direction {
     Up,
     Down,
@@ -542,6 +534,62 @@ pub fn day_nine_p2(inputs: &str) {
     //dbg!(grid);
 }
 
+pub fn day_ten_p1(inputs: &str) {
+    let mut pull = (20..).step_by(40);
+    let results = inputs.lines().scan((0, 1), |(i, x), line| {
+        *i += 1;
+        match line {
+            "noop" => Some((*i, *x)),
+            _ => {
+                *i += 1;
+                *x += line
+                    .split_once(" ")
+                    .unwrap()
+                    .1
+                    .parse::<i16>()
+                    .expect("Arg should be an integer");
+                Some((*i, *x))
+            }
+        }
+    });
+
+      let mut looking = pull.next().unwrap();
+    let sum: i16 = results
+        .scan(0, |last_x, (i, x)| {
+            if i > looking {
+                //print!("{:?}*{:?}={:?}!, ", i - 1, *last_x, (i - 1) * *last_x);
+                looking = pull.next().unwrap();
+                let val = (i - 1) * *last_x;
+                *last_x = x;
+                Some(val)
+            } else if i == looking {
+                //print!("{:?}*{:?}={:?}, ", i, *last_x, i * *last_x);
+                looking = pull.next().unwrap();
+                let val = i * *last_x;
+                *last_x = x;
+                Some(val)
+            }
+            /*else if i > 180 && i < 220 {
+                print!("{:?}*{:?}={:?}, ", i, x, i * x);
+                *last_x = x;
+                Some(0)
+            } */
+            else if i > 220 {
+                None
+            } else {
+                *last_x = x;
+                Some(0)
+            }
+        })
+        /*.inspect(|x| {
+            if *x > 0 {
+                print!("{:?}, ", x);
+            }
+        })*/
+        .sum();
+    println!("Final Sum: {:?}", sum);
+}
+
 pub fn run_days() {
     let samples = include_str!("../inputs/09_sample.txt");
     let _inputs = include_str!("../inputs/09_input.txt");
@@ -556,6 +604,13 @@ pub fn run_days() {
     day_nine_p2(_samples2);
     print!("Running Day Nine, Part two Inputs: ");
     day_nine_p2(_inputs);
+
+    let samples = include_str!("../inputs/10_sample.txt");
+    let _inputs = include_str!("../inputs/10_input.txt");
+    print!("\nRunning Day Ten, Part one sample: ");
+    day_ten_p1(samples);
+    print!("Running Day Ten, Part one Inputs: ");
+    day_ten_p1(_inputs);
 
     let samples = include_str!("../inputs/11_sample.txt");
     let _inputs = include_str!("../inputs/11_input.txt");
