@@ -534,6 +534,47 @@ pub fn day_nine_p2(inputs: &str) {
     //dbg!(grid);
 }
 
+fn update_register(
+    cycle: i16,
+    check_value: i16,
+    register: i16,
+    mut last_register: i16,
+) -> (bool, i16, Option<i16>) {
+    let result: Option<i16>;
+    let update: bool;
+    if cycle > check_value {
+        // handle our look value not being in our list
+        //print!("{:?}*{:?}={:?}!, ", i - 1, *last_x, (i - 1) * *last_x);
+        update = true;
+        let val = (cycle - 1) * last_register;
+        last_register = register;
+        result = Some(val);
+    } else if cycle == check_value {
+        // print out the current value, before any current operation completes
+        //print!("{:?}*{:?}={:?}, ", cycle, last_register, cycle * last_register);
+        update = true;
+        let val = cycle * last_register;
+        last_register = register;
+        result = Some(val);
+    }
+    /*else if cycle > 180 && cycle < 220 {
+        print!("{:?}*{:?}={:?}, ", cycle, register, cycle * register);
+        *last_register = register;
+        result = Some(0);
+    } */
+    else if cycle > 220 {
+        // Handle our exit condition so we don't loop infinitely
+        update = false;
+        result = None;
+    } else {
+        // Make sure to always put out an actual value while we should continue
+        update = false;
+        last_register = register;
+        result = Some(0);
+    }
+    (update, last_register, result)
+}
+
 pub fn day_ten_p1(inputs: &str) {
     let mut pull = (20..).step_by(40);
     let results = inputs.lines().scan((0, 1), |(i, x), line| {
@@ -553,33 +594,16 @@ pub fn day_ten_p1(inputs: &str) {
         }
     });
 
-      let mut looking = pull.next().unwrap();
+    let mut looking = pull.next().unwrap();
     let sum: i16 = results
         .scan(0, |last_x, (i, x)| {
-            if i > looking {
-                //print!("{:?}*{:?}={:?}!, ", i - 1, *last_x, (i - 1) * *last_x);
+            let do_pull: bool;
+            let val: Option<i16>;
+            (do_pull, *last_x, val) = update_register(i, looking, x, *last_x);
+            if do_pull {
                 looking = pull.next().unwrap();
-                let val = (i - 1) * *last_x;
-                *last_x = x;
-                Some(val)
-            } else if i == looking {
-                //print!("{:?}*{:?}={:?}, ", i, *last_x, i * *last_x);
-                looking = pull.next().unwrap();
-                let val = i * *last_x;
-                *last_x = x;
-                Some(val)
             }
-            /*else if i > 180 && i < 220 {
-                print!("{:?}*{:?}={:?}, ", i, x, i * x);
-                *last_x = x;
-                Some(0)
-            } */
-            else if i > 220 {
-                None
-            } else {
-                *last_x = x;
-                Some(0)
-            }
+            val
         })
         /*.inspect(|x| {
             if *x > 0 {
@@ -588,6 +612,60 @@ pub fn day_ten_p1(inputs: &str) {
         })*/
         .sum();
     println!("Final Sum: {:?}", sum);
+}
+
+pub fn day_ten_p2(inputs: &str) {
+    let display: String = inputs
+        .lines()
+        .scan((0, 1, 1), |(i, x, last_x), line| {
+            *i += 1;
+            match line {
+                // Noops just print the current X register and cycle number
+                "noop" => Some(vec![(*i - 1, *x)]),
+                _ => {
+                    // Our only other command is addx, which prints the last X twice
+                    // before it updates to the new value
+                    *i += 1;
+                    *x += line
+                        .split_once(" ")
+                        .unwrap()
+                        .1
+                        .parse::<i16>()
+                        .expect("Arg should be an integer");
+                    // So fake out the two values that it takes to update in a Vec
+                    let res = vec![(*i - 2, *last_x), (*i - 1, *last_x)];
+                    *last_x = *x;
+                    Some(res)
+                }
+            }
+        })
+        // Flatten out all our vectors into one list
+        .flatten()
+        /*.inspect(|(i, x)| {
+            print!("({:?},{:?})%{:?}-", i, x, i % 40);
+        })*/
+        .map(|(cycle, x)| {
+            let res: char;
+            // Get the current pixel to print
+            if (((cycle % 40) - 1)..=((cycle % 40) + 1)).contains(&x) {
+                res = '#';
+            } else {
+                res = '.'
+            }
+            // Split into lines for display
+            if cycle % 40 == 0 {
+                vec!['\n', res]
+            } else {
+                vec![res]
+            }
+        })
+        // Collapse out our individual vectors into one list
+        .flatten()
+        //.inspect(|x| print!("{:?}, ", x))
+        // Collect our list into a single string!
+        .collect();
+
+    println!("Final Display: {}", display);
 }
 
 pub fn run_days() {
@@ -611,6 +689,11 @@ pub fn run_days() {
     day_ten_p1(samples);
     print!("Running Day Ten, Part one Inputs: ");
     day_ten_p1(_inputs);
+
+    print!("\nRunning Day Ten, Part two sample: ");
+    day_ten_p2(samples);
+    print!("\nRunning Day Ten, Part two Inputs: ");
+    day_ten_p2(_inputs);
 
     let samples = include_str!("../inputs/11_sample.txt");
     let _inputs = include_str!("../inputs/11_input.txt");
